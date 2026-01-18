@@ -22,6 +22,29 @@
 ---
 
 # 更新
+- **🆕 新增边缘检测与自动吸附功能**
+    
+    <details>
+        <summary>边缘检测与自动吸附</summary>
+        <p>增强多边形标注功能，支持智能边缘检测和自动吸附。在绘制多边形时按住 <kbd>Alt</kbd> 键，顶点将自动吸附到附近的边缘。</p>
+        <h4>核心特性：</h4>
+        <ul>
+            <li>🎯 <strong>智能边缘检测</strong>：使用Canny和Sobel算法进行精确边缘检测</li>
+            <li>⚡ <strong>实时吸附</strong>：顶点自动吸附到可配置距离内的最近边缘</li>
+            <li>🚀 <strong>高性能</strong>：智能缓存机制，确保大图像上的流畅操作</li>
+            <li>🔧 <strong>可配置</strong>：可调节吸附距离和检测参数</li>
+            <li>🎨 <strong>无缝集成</strong>：与现有的Shift+角度约束功能完美配合</li>
+        </ul>
+        <h4>使用方法：</h4>
+        <ol>
+            <li>切换到多边形标注模式</li>
+            <li>绘制时按住 <kbd>Alt</kbd> 键</li>
+            <li>顶点将自动吸附到附近边缘</li>
+            <li>松开 <kbd>Alt</kbd> 键禁用吸附</li>
+        </ol>
+        <p><em>此功能显著提升了处理复杂物体边界时的标注精度和效率。</em></p>
+    </details>
+
 - **V1.5.2版本，支持基于sam3的视觉提示（visual prompt）功能**
     <details>
         <summary>视觉提示</summary>

@@ -22,6 +22,29 @@ Please refers to our latest [Documentation in English](https://isat-sam.readthed
 ---
 
 # News
+- **🆕 Edge Detection and Auto-Snapping Feature Added**
+    
+    <details>
+        <summary>Edge Detection & Auto-Snapping</summary>
+        <p>Enhanced polygon annotation with intelligent edge detection and automatic snapping. Hold <kbd>Alt</kbd> key while drawing polygons to automatically snap vertices to nearby edges.</p>
+        <h4>Key Features:</h4>
+        <ul>
+            <li>🎯 <strong>Smart Edge Detection</strong>: Uses Canny and Sobel algorithms for accurate edge detection</li>
+            <li>⚡ <strong>Real-time Snapping</strong>: Automatic vertex snapping to nearest edges within configurable distance</li>
+            <li>🚀 <strong>High Performance</strong>: Intelligent caching mechanism for smooth operation on large images</li>
+            <li>🔧 <strong>Configurable</strong>: Adjustable snapping distance and detection parameters</li>
+            <li>🎨 <strong>Seamless Integration</strong>: Works perfectly with existing Shift+angle constraint functionality</li>
+        </ul>
+        <h4>Usage:</h4>
+        <ol>
+            <li>Switch to polygon annotation mode</li>
+            <li>Hold <kbd>Alt</kbd> key while drawing</li>
+            <li>Vertices will automatically snap to nearby edges</li>
+            <li>Release <kbd>Alt</kbd> to disable snapping</li>
+        </ol>
+        <p><em>This feature significantly improves annotation precision and efficiency when working with complex object boundaries.</em></p>
+    </details>
+
 - **In version 1.5.2, ISAT supports visual prompt base on SAM3.**
     
     <details>
