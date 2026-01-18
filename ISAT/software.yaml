@@ -153,10 +153,11 @@ shortcut:
     key: ''
 software:
   auto_save: false
+  contour_method: SIMPLE
   contour_mode: external
   create_mode_invisible_polygon: true
   current_converter: coco
-  language: en
+  language: zh
   mask_alpha: 0.6
   polygon_alpha_hover: 0.6
   polygon_alpha_no_hover: 0.3
@@ -165,4 +166,5 @@ software:
   show_prompt: true
   use_bfloat16: false
   use_polydp: true
+  use_video_segmentation: true
   vertex_size: 1

@@ -10,6 +10,7 @@ from PIL import Image
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ISAT.configs import CONTOURMode, CONTOURMethod, DRAWMode, STATUSMode
+from ISAT.mouse_pan_config import is_middle_mouse_pan_enabled
 from ISAT.utils.dicom import load_dcm_as_image
 from ISAT.widgets.polygon import Line, Polygon, PromptPoint, Rect, Vertex
 
@@ -1550,6 +1551,8 @@ class AnnotationView(QtWidgets.QGraphicsView):
 
         self.ctrl_pressed = False
         self.shift_pressed = False
+        self.middle_mouse_pressed = False
+        self.last_mouse_pos = None
         self.factor = 1.2
         self.scroll = 40
 
@@ -1578,6 +1581,91 @@ class AnnotationView(QtWidgets.QGraphicsView):
             if self.scene():  # 同步到scene
                 self.scene().shift_pressed = False
         super(AnnotationView, self).keyReleaseEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.MiddleButton:
+            # 检查是否启用了中键拖拽功能
+            if is_middle_mouse_pan_enabled():
+                self.middle_mouse_pressed = True
+                self.last_mouse_pos = event.pos()
+                self.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
+                event.accept()
+                return
+        
+        super(AnnotationView, self).mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.middle_mouse_pressed and self.last_mouse_pos is not None:
+            # 实现1:1鼠标跟随的拖拽逻辑
+            delta = event.pos() - self.last_mouse_pos
+            
+            # 获取当前的滚动条值
+            h_scroll = self.horizontalScrollBar()
+            v_scroll = self.verticalScrollBar()
+            
+            # 计算新的滚动条位置（1:1跟随）
+            new_h_value = h_scroll.value() - delta.x()
+            new_v_value = v_scroll.value() - delta.y()
+            
+            # 设置新的滚动条位置
+            h_scroll.setValue(new_h_value)
+            v_scroll.setValue(new_v_value)
+            
+            # 更新最后鼠标位置
+            self.last_mouse_pos = event.pos()
+            
+            # 手动更新十字准星位置
+            if self.scene():
+                # 直接更新十字准星，避免复杂的事件处理
+                scene_pos = self.mapToScene(event.pos())
+                
+                # 移除旧的准星线
+                if hasattr(self.scene(), 'guide_line_x') and self.scene().guide_line_x:
+                    if self.scene().guide_line_x in self.scene().items():
+                        self.scene().removeItem(self.scene().guide_line_x)
+                    self.scene().guide_line_x = None
+                    
+                if hasattr(self.scene(), 'guide_line_y') and self.scene().guide_line_y:
+                    if self.scene().guide_line_y in self.scene().items():
+                        self.scene().removeItem(self.scene().guide_line_y)
+                    self.scene().guide_line_y = None
+                
+                # 创建新的准星线
+                if self.scene().width() > 0 and self.scene().height() > 0:
+                    pen = QtGui.QPen()
+                    pen.setStyle(QtCore.Qt.PenStyle.DashLine)
+                    
+                    # 水平线
+                    self.scene().guide_line_x = QtWidgets.QGraphicsLineItem(
+                        QtCore.QLineF(scene_pos.x(), 0, scene_pos.x(), self.scene().height())
+                    )
+                    self.scene().guide_line_x.setPen(pen)
+                    self.scene().guide_line_x.setZValue(1)
+                    self.scene().addItem(self.scene().guide_line_x)
+                    
+                    # 垂直线
+                    self.scene().guide_line_y = QtWidgets.QGraphicsLineItem(
+                        QtCore.QLineF(0, scene_pos.y(), self.scene().width(), scene_pos.y())
+                    )
+                    self.scene().guide_line_y.setPen(pen)
+                    self.scene().guide_line_y.setZValue(1)
+                    self.scene().addItem(self.scene().guide_line_y)
+            
+            event.accept()
+            return
+        
+        super(AnnotationView, self).mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.MiddleButton:
+            if self.middle_mouse_pressed:
+                self.middle_mouse_pressed = False
+                self.last_mouse_pos = None
+                self.setCursor(QtCore.Qt.CursorShape.ArrowCursor)  # 恢复默认光标
+                event.accept()
+                return
+        
+        super(AnnotationView, self).mouseReleaseEvent(event)
 
     def wheelEvent(self, event: QtGui.QWheelEvent):
         angel = event.angleDelta()

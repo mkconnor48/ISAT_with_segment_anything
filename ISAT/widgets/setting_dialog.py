@@ -4,6 +4,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ISAT.ui.setting_dialog import Ui_Dialog
+from ISAT.mouse_pan_config import is_middle_mouse_pan_enabled, set_middle_mouse_pan_enabled
 
 
 class SettingDialog(QtWidgets.QDialog, Ui_Dialog):
@@ -12,6 +13,30 @@ class SettingDialog(QtWidgets.QDialog, Ui_Dialog):
         self.mainwindow = mainwindow
         self.setupUi(self)
         self.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+
+        # 添加中键拖拽复选框
+        self.checkBox_middle_mouse_pan = QtWidgets.QCheckBox("启用中键拖拽")
+        self.checkBox_middle_mouse_pan.setChecked(is_middle_mouse_pan_enabled())
+        self.checkBox_middle_mouse_pan.stateChanged.connect(self.middle_mouse_pan_state_changed)
+        
+        # 找到合适的位置添加复选框（在现有复选框附近）
+        # 这里我们添加到垂直布局中
+        if hasattr(self, 'verticalLayout'):
+            # 尝试找到现有的垂直布局
+            existing_layout = None
+            for child in self.findChildren(QtWidgets.QWidget):
+                if hasattr(child, 'layout') and child.layout():
+                    layout = child.layout()
+                    if isinstance(layout, QtWidgets.QVBoxLayout):
+                        existing_layout = layout
+                        break
+            
+            if existing_layout:
+                # 在现有布局中添加新的复选框
+                existing_layout.insertWidget(existing_layout.count() - 2, self.checkBox_middle_mouse_pan)
+            else:
+                # 如果找不到合适的布局，添加到主布局
+                self.verticalLayout.addWidget(self.checkBox_middle_mouse_pan)
 
         self.checkBox_auto_save.stateChanged.connect(
             self.mainwindow.change_auto_save_state
@@ -54,6 +79,11 @@ class SettingDialog(QtWidgets.QDialog, Ui_Dialog):
             self.mainwindow.change_polygon_alpha_no_hover
         )
         self.pushButton_close.clicked.connect(self.close)
+
+    def middle_mouse_pan_state_changed(self, state):
+        """中键拖拽状态改变时的处理"""
+        enabled = state == QtCore.Qt.Checked
+        set_middle_mouse_pan_enabled(enabled)
 
     def contour_mode_index_changed(self, index):
         if index == 0:
