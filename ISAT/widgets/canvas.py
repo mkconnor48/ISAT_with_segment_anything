@@ -12,6 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from ISAT.configs import CONTOURMode, CONTOURMethod, DRAWMode, STATUSMode
 from ISAT.mouse_pan_config import is_middle_mouse_pan_enabled
 from ISAT.utils.dicom import load_dcm_as_image
+from ISAT.utils.edge_detection import get_edge_detector
 from ISAT.widgets.polygon import Line, Polygon, PromptPoint, Rect, Vertex
 
 
@@ -95,6 +96,13 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
         # 按键状态
         self.shift_pressed = False
         self.ctrl_pressed = False
+        self.alt_pressed = False
+
+        # 边缘吸附相关
+        self.edge_detector = get_edge_detector()
+        self.current_edges = None  # 当前图像的边缘数据
+        self.edge_snap_distance = 10  # 默认吸附距离
+        self.edge_snap_enabled = True  # 默认启用边缘吸附
 
         #
         self.selected_polygons_list = list()
@@ -140,6 +148,15 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
         self.image_item.setPixmap(QtGui.QPixmap.fromImage(q_image))
         # self.image_item.setPixmap(QtGui.QPixmap(image_path))
         self.setSceneRect(self.image_item.boundingRect())
+        
+        # 计算边缘数据用于吸附功能
+        if self.image_data is not None:
+            try:
+                self.current_edges = self.edge_detector.detect_canny_edges(self.image_data)
+            except Exception as e:
+                print(f"边缘检测失败: {e}")
+                self.current_edges = None
+        
         self.change_mode_to_view()
 
     def unload_image(self):
@@ -344,6 +361,41 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
 
     def change_contour_method_to_none(self):
         self.contour_method = CONTOURMethod.NONE
+
+    def apply_edge_snap(self, pos: QtCore.QPointF) -> QtCore.QPointF:
+        """
+        应用边缘吸附到指定位置
+        
+        Args:
+            pos (QtCore.QPointF): 原始位置
+            
+        Returns:
+            QtCore.QPointF: 吸附后的位置
+        """
+        if not self.edge_snap_enabled or not self.alt_pressed:
+            return pos
+            
+        if self.current_edges is None:
+            return pos
+            
+        # 转换为整数坐标
+        x, y = int(pos.x()), int(pos.y())
+        
+        # 检查边界
+        if (x < 0 or y < 0 or 
+            x >= self.current_edges.shape[1] or 
+            y >= self.current_edges.shape[0]):
+            return pos
+        
+        # 查找最近的边缘点
+        nearest_edge = self.edge_detector.find_nearest_edge_point(
+            self.current_edges, (x, y), self.edge_snap_distance
+        )
+        
+        if nearest_edge is not None:
+            return QtCore.QPointF(nearest_edge[0], nearest_edge[1])
+        
+        return pos
 
     def start_segment_anything(self):
         """Start segmenting anything with point prompt."""
@@ -1148,6 +1200,10 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
                     point = self.current_graph.removePoint(len(self.current_graph.points) - 1)
                     if point is not None:
                         pos = point
+                    
+                    # 应用边缘吸附
+                    pos = self.apply_edge_snap(pos)
+                    
                     # 添加当前点
                     self.current_graph.addPoint(pos)
                     # 添加随鼠标移动的点
@@ -1368,6 +1424,10 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
                     last_point = self.current_graph.points[-2]
                     # 计算约束后的位置
                     pos = self._constrain_to_angle(last_point, pos)
+                
+                # 应用边缘吸附
+                pos = self.apply_edge_snap(pos)
+                
                 self.current_graph.movePoint(len(self.current_graph.points) - 1, pos)
 
             elif self.draw_mode == DRAWMode.SEGMENTANYTHING_BOX:
@@ -1551,6 +1611,7 @@ class AnnotationView(QtWidgets.QGraphicsView):
 
         self.ctrl_pressed = False
         self.shift_pressed = False
+        self.alt_pressed = False
         self.middle_mouse_pressed = False
         self.last_mouse_pos = None
         self.factor = 1.2
@@ -1569,6 +1630,10 @@ class AnnotationView(QtWidgets.QGraphicsView):
             self.shift_pressed = True
             if self.scene():  # 同步到scene
                 self.scene().shift_pressed = True
+        if event.key() == QtCore.Qt.Key.Key_Alt:
+            self.alt_pressed = True
+            if self.scene():  # 同步到scene
+                self.scene().alt_pressed = True
         super(AnnotationView, self).keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
@@ -1580,6 +1645,10 @@ class AnnotationView(QtWidgets.QGraphicsView):
             self.shift_pressed = False
             if self.scene():  # 同步到scene
                 self.scene().shift_pressed = False
+        if event.key() == QtCore.Qt.Key.Key_Alt:
+            self.alt_pressed = False
+            if self.scene():  # 同步到scene
+                self.scene().alt_pressed = False
         super(AnnotationView, self).keyReleaseEvent(event)
 
     def mousePressEvent(self, event):
